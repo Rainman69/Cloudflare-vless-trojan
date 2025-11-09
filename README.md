@@ -1,293 +1,431 @@
-# Cloudflare-workers/pages代理脚本【目前版本：25.5.4】
+# Cloudflare Workers/Pages Proxy Script [Current Version: 25.5.4]
+
+> **English Translation by Erfan (Rainman69)** | [View Original Chinese Version](https://github.com/yonggekkk/Cloudflare-vless-trojan)
+
 ------------------------------------------------
+
+## 🌟 Project Overview
+
+This project provides free VLESS and Trojan proxy node deployment solutions using Cloudflare Workers and Pages. It's designed for beginners with local configuration, no external subscription converters, and enhanced privacy protection.
+
+### Key Features
+
+1. **Beginner-Friendly**: Default nodes use CF official IPs, eliminating the need for frequent subscription updates
+2. **Cost-Effective**: No custom domain required (though supported if desired)
+3. **Simple Setup**: Deploy with one click, set a UUID/password, and you're ready to go
+4. **Protocol Support**:
+   - **Workers**: vless+ws+tls, trojan+ws+tls, vless+ws, trojan+ws
+   - **Pages**: vless+ws+tls, trojan+ws+tls
+5. **Multiple Export Formats**: Single node links, aggregated universal links, subscriptions for sing-box and clash
+6. **NAT64 Version**: Automatic ProxyIP configuration for VLESS NAT64 variant (code by [badafans](https://github.com/badafans))
+
+### Privacy & Security
+
+- ✅ **Fully Local Configuration**: All settings are edited locally
+- ✅ **No Third-Party Dependencies**: No subscription converters or external link references
+- ✅ **Enhanced Privacy**: Your node subscription information remains private
+
 ------------------------------------------------
-### 1、本项目仅支持本地化部署
-### 2、本项目配置都为本地化编辑，不使用订阅器、订阅转换等第三方外链引用
-### 3、无需担心节点订阅信息被订阅器作者或者订阅转换作者后台查看
---------------------------------
-## 脚本特色：
-#### 1、懒人小白专用！默认节点都为CF官方IP，无需频繁更新订阅获取客户端优选IP
-#### 2、为减少新手小白额外的成本，本项目不推荐使用自定义域名，如果你一定要用自定义域名，也可以
-#### 3、当在CF点击部署按钮后，可直接手搓节点或者使用分享链接，最多设置一个uuid/密码，其他不用改
-#### 4、Workers方式：支持vless+ws+tls、trojan+ws+tls、vless+ws、trojan+ws代理节点
-#### 5、Pages方式：支持vless+ws+tls、trojan+ws+tls代理节点
-#### 6、支持单节点链接、聚合通用节点链接、聚合通用节点订阅、sing-box节点订阅、clash节点订阅
-#### 7、VLESS仅nat64套壳版将自动填充proxyip，无需且不支持proxyip设置，由[badafans](https://github.com/badafans)提供代码
--------------------------------------------------------------
 
-### 交流平台：[甬哥博客地址](https://ygkkk.blogspot.com)、[甬哥YouTube频道](https://www.youtube.com/@ygkkk)、[甬哥TG电报群组](https://t.me/+jZHc6-A-1QQ5ZGVl)、[甬哥TG电报频道](https://t.me/+DkC9ZZUgEFQzMTZl)
---------------------------------
+## 📚 Table of Contents
 
-### 推荐新手用户请先看以下四个入门视频教程：
+- [VLESS Node Configuration Variables](#1-vless-node-configuration-variables)
+- [Trojan Node Configuration Variables](#2-trojan-node-configuration-variables)
+- [Custom ProxyIP Configuration](#3-custom-proxyip-configuration)
+- [Self-Hosted ProxyIP & Reverse Proxy IP](#4-self-hosted-proxyip--reverse-proxy-ip)
+- [Viewing Configuration & Share Links](#5-viewing-configuration--share-links)
+- [Optimal IP Selection](#6-optimal-ip-selection)
+- [Recommended Clients](#7-recommended-clients)
+- [Video Tutorials](#video-tutorials)
+- [Mobile Optimization Scripts](#mobile-optimization-scripts)
 
-[2025.9.8更新：半混淆文件使用说明；解决你对优选IP的长期困惑；本轮1101报错的未来警示](https://youtu.be/rUpCuXTQqmQ)
+------------------------------------------------
 
-[永久免费的cf vless workers原生域名节点 | 无需自定义域名 | 无需优选IP订阅 | 无需面版控制台 | 只需保存两个参数 | 自建无限不死节点！](https://youtu.be/PpPKzOYLZQg)
+## 1. VLESS Node Configuration Variables
 
-[永久免费的cf vless pages原生域名节点 | NAT64生成ProxyIP的重要说明 | CF节点为何有些网站上不了？](https://youtu.be/yR-JpVV6SHs)
+**Note**: NAT64 variant does NOT support ProxyIP configuration as it's automatically filled.
 
-[CF vless/trojan免费节点混淆时代来临：workers/pages代码混淆后详细设置的更新说明；1101报错总结](https://youtu.be/QSFaP5EVI04)
+| Variable Function | Variable Name | Value Requirements | Default Value | Required |
+|:---|:---|:---|:---|:---|
+| **UUID** (Required) | `uuid` (lowercase) | Valid UUID format | Public UUID: `86c50e3a-5b87-49dd-bd20-03c7f2735e40` | Recommended |
+| **Global CF Website Access** | `proxyip` (lowercase) | Port 443: IPv4 address, [IPv6 address], domain<br>Non-443: IPv4:port, [IPv6]:port, domain:port | Empty (default) | Optional |
+| **Subscription Nodes: Optimal IPs** | `ip1` to `ip13` (13 variables) | CF official IP, CF reverse proxy IP, CF optimal domain | CF official visa domains from different regions | Optional |
+| **Subscription Nodes: Port Mapping** | `pt1` to `pt13` (13 variables) | CF's 13 standard ports, or custom ports for reverse proxy | CF's 13 standard ports | Optional |
 
----------------------------------------------
+### Understanding IP Variables (For Advanced Users)
 
-## 一：CF Vless节点可设置的变量内容 (仅nat64套壳版无需且不支持设置proxyip)
+**IMPORTANT**: Only set `ip1` to `ip13` and `pt1` to `pt13` if you:
+- Use subscription-based clients
+- Want to customize optimal IPs
 
-| 变量作用 | 变量名称| 变量值要求| 变量默认值| 变量要求|
-| :--- | :--- | :--- | :--- | :--- |
-| 1、必要的uuid | uuid (小写字母) |符合uuid规定格式 |万人骑uuid：86c50e3a-5b87-49dd-bd20-03c7f2735e40|建议|
-| 2、全局节点能上CF类网站 | proxyip (小写字母) |443端口：ipv4地址、[ipv6地址]、域名。非443端口：IPV4地址:端口、[IPV6地址]:端口、域名:端口|proxyip：留空|可选|
-| 3、订阅节点：优选IP | ip1到ip13，共13个 |CF官方IP、CF反代IP、CF优选域名| CF官方不同地区的visa域名|可选|
-| 4、订阅节点：优选IP对应端口 | pt1到pt13，共13个 |CF13个标准端口、反代IP对应任意端口| CF13个标准端口|可选|
+**Port & TLS Mapping**:
+- `ip1` to `ip7`, `pt1` to `pt7`: Port 80 series (TLS OFF) nodes only
+- `ip8` to `ip13`, `pt8` to `pt13`: Port 443 series (TLS ON) nodes only
 
+**Configuration Rules**:
+- Official IPs: No need to set ports (defaults to 13 CF standard ports)
+- Reverse Proxy IPs: Must configure ports according to TLS status
 
-## 二：CF Trojan节点可设置的变量内容
+------------------------------------------------
 
-| 变量作用 | 变量名称| 变量值要求| 变量默认值| 变量要求|
-| :--- | :--- | :--- | :--- | :--- |
-| 1、必要的密码 | pswd (小写字母) |建议字母数字 |万人骑密码：trojan|建议|
-| 2、全局节点能上CF类网站 | proxyip (小写字母) |443端口：ipv4地址、[ipv6地址]、域名。非443端口：IPV4地址:端口、[IPV6地址]:端口、域名:端口|proxyip：留空|可选|
-| 3、订阅节点：优选IP | ip1到ip13，共13个 |CF官方IP、CF反代IP、CF优选域名| CF官方不同地区的visa域名|可选|
-| 4、订阅节点：优选IP对应端口 | pt1到pt13，共13个 |CF13个标准端口、反代IP对应任意端口| CF13个标准端口|可选|
+## 2. Trojan Node Configuration Variables
 
-#### 订阅节点中IP与端口的变量（3与4）特别注意 【新手小白可无视变量（3与4），使用默认即可】
+| Variable Function | Variable Name | Value Requirements | Default Value | Required |
+|:---|:---|:---|:---|:---|
+| **Password** (Required) | `pswd` (lowercase) | Letters and numbers recommended | Public password: `trojan` | Recommended |
+| **Global CF Website Access** | `proxyip` (lowercase) | Port 443: IPv4 address, [IPv6 address], domain<br>Non-443: IPv4:port, [IPv6]:port, domain:port | Empty (default) | Optional |
+| **Subscription Nodes: Optimal IPs** | `ip1` to `ip13` (13 variables) | CF official IP, CF reverse proxy IP, CF optimal domain | CF official visa domains from different regions | Optional |
+| **Subscription Nodes: Port Mapping** | `pt1` to `pt13` (13 variables) | CF's 13 standard ports, or custom ports for reverse proxy | CF's 13 standard ports | Optional |
 
-1、切记：当你非要用订阅类的客户端，且要改优选IP时，才需要设置ip1到ip13，pt1到pt13的变量
+------------------------------------------------
 
-2、ip1到ip7，pt1到pt7，在订阅分享链接中，仅支持80系端口关TLS节点
+## 3. Custom ProxyIP Configuration
 
-3、ip8到ip13，pt8到pt13，在订阅分享链接中，仅支持443系端口开TLS节点
+While the script includes default ProxyIPs, you can customize them using IPv4, IPv6, or domain names.
 
-4、设置官方IP，无需设置端口（默认已设置13个CF标准端口）；设置反代IP需要分开关TLS，端口变量也必须设置
+### Method 1: Global Node Variable (Affects All Nodes)
 
-5、订阅节点变量设置可参考此[视频教程](https://youtu.be/8s-ELRuFaeE?si=MjhcKbt20d2Q2eqp&t=447)
+| ProxyIP Port | IPv4 Format | IPv6 Format | Domain Format |
+|:---|:---|:---|:---|
+| **Port 443** | `IPv4_address` | `[IPv6_address]` | `domain.com` |
+| **Non-443 Port** | `IPv4_address:port` | `[IPv6_address]:port` | `domain.com:port` |
 
----------------------------------
-## 三：自定义proxyip
+### Method 2: Single Node Path (Affects Only Current Node)
 
-虽说脚本默认自带其他大佬的proxyip，但同时也支持自定义proxyip
+| ProxyIP Port | IPv4 Format | IPv6 Format | Domain Format |
+|:---|:---|:---|:---|
+| **Port 443** | `/pyip=IPv4_address` | `/pyip=[IPv6_address]` | `/pyip=domain.com` |
+| **Non-443 Port** | `/pyip=IPv4_address:port` | `/pyip=[IPv6_address]:port` | `/pyip=domain.com:port` |
 
-支持IPV4、IPV6、域名三种方式（端口为443时，可不写:端口）
+### Priority Rules
 
-1、全局节点变量形式（上文一与二已说明）：
+1. **Path-based ProxyIP**: Takes precedence over global settings for that specific node
+2. **Global ProxyIP**: Applies to all nodes without path-based ProxyIP configuration
+3. **Keyword Trigger**: When path contains `/pyip=`, only path-based ProxyIP is used
 
-| proxyip端口 | IPv4形式| IPv6形式| 域名形式|
-| :--- | :--- | :--- | :--- |
-| 443端口 | IPV4地址 |[IPV6地址] |域名|
-| 非443端口 | IPV4地址:端口 |[IPV6地址]:端口 |域名:端口|
+------------------------------------------------
 
-2、单节点path路径形式：
+## 4. Self-Hosted ProxyIP & Reverse Proxy IP
 
-| proxyip端口 | IPv4形式| IPv6形式| 域名形式|
-| :--- | :--- | :--- | :--- |
-| 443端口 | /pyip=IPV4地址 |/pyip=[IPV6地址] |/pyip=域名|
-| 非443端口 | /pyip=IPV4地址:端口 |/pyip=[IPV6地址]:端口 |/pyip=域名:端口|
+### No SOCKS5 Needed! Use Reality Protocol to Build Your Own ProxyIP
 
-注意：
+#### For Serv00 (Free Hosting)
 
-1、单节点path路径变更proxyip：仅影响当前客户端正在设置的单节点，并不影响其他单节点或者订阅节点的proxyip
+**Project**: [sing-box-yg for Serv00](https://github.com/yonggekkk/sing-box-yg#%E4%BA%8Cserv00%E4%B8%80%E9%94%AE%E4%B8%89%E5%8D%8F%E8%AE%AE%E5%85%B1%E5%AD%98%E8%84%9A%E6%9C%ACserv00%E4%B8%93%E7%94%A8)
 
-2、全局节点变更proxyip：影响所有未设置path路径proxyip的节点
+Modified from Serv00 Old Wang's sing-box script. Supports three protocols:
+- vless-reality
+- vmess-ws (with Argo)
+- hysteria2
 
-3、当节点的path路径出现```/pyip=```关键字时，此节点的proxyip只认准path路径设置的proxyip，全局proxyip不起作用
+**Key Feature**: Reality protocol defaults to support CF vless/trojan nodes as ProxyIP and non-standard port reverse proxy IPs.
 
----------------------------------
-## 四：无需socks5！小白利用reality协议一键自制proxyip、80系/443系的任意端口反代IP
-
-### 1、Serv00专用：
-
-[项目地址](https://github.com/yonggekkk/sing-box-yg?tab=readme-ov-file#%E4%BA%8Cserv00%E4%B8%80%E9%94%AE%E4%B8%89%E5%8D%8F%E8%AE%AE%E5%85%B1%E5%AD%98%E8%84%9A%E6%9C%ACserv00%E4%B8%93%E7%94%A8)
-
-修改自Serv00老王sing-box安装脚本，支持一键三协议：vless-reality、vmess-ws(argo)、hysteria2。
-
-主要增加reality协议默认支持 CF vless/trojan 节点的proxyip以及非标端口的优选反代IP功能
-
-Serv00专用一键脚本 (默认自动安装进程保活)
-```
+**One-Click Installation Script** (includes auto-keepalive):
+```bash
 bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/serv00.sh)
 ```
 
-### 2、VPS专用：
+#### For VPS (Virtual Private Server)
 
-推荐使用 离中国近、便宜、流量多的纯IPV6的vps进行搭建。近可能避免使用IPV4，因为IPV4大概率被大佬们偷扫反代IP，成为他们的公益或收费反代IP库。如果非要用IPV4，请时常关注下自己VPS的流量，使用proxyip与客户端优选IP都会消耗VPS流量
+**Recommendation**: Use IPv6-only VPS that are:
+- Close to China
+- Affordable
+- High bandwidth
 
-搭建proxyip与反代ip的脚本推荐：[x-ui-yg脚本](https://github.com/yonggekkk/x-ui-yg)、[sing-box-yg脚本](https://github.com/yonggekkk/sing-box-yg)
+**Why IPv6?**: IPv4 addresses are often scanned and added to public/commercial reverse proxy databases. If using IPv4, monitor your VPS traffic regularly.
 
-相关操作请看[视频教程高阶1](https://youtu.be/QOnMVULADko)、[视频教程高阶2](https://youtu.be/CVZStM0t8BA)
+**Recommended Scripts**:
+- [x-ui-yg script](https://github.com/yonggekkk/x-ui-yg)
+- [sing-box-yg script](https://github.com/yonggekkk/sing-box-yg)
 
+### Four Usage Scenarios (Recommended for TLS Nodes)
 
-### 3、可现实以下四种情况(推荐在TLS节点环境下)：
+#### Scenario 1: Client Optimal IP Only
+- **Non-CF websites**: Traffic exits via VPS region
+- **CF websites**: Traffic exits via ProxyIP region
 
-可选择现实1：仅用于客户端优选IP，即CF节点访问非CF网站的落地IP地区与VPS地区一致，访问CF网站落地IP地区根据proxyip决定
+#### Scenario 2: ProxyIP Only
+- **CF websites**: Traffic exits via VPS region
+- **Non-CF websites**: Traffic exits via client optimal IP region
 
-可选择现实2：仅用于proxyip，即CF节点访问CF网站的落地IP地区与VPS地区一致，访问非CF网站落地IP地区根据客户端优选IP决定
+#### Scenario 3: Both Client Optimal IP & ProxyIP
+- **All websites**: Traffic exits via VPS region
 
-可选择现实3：同时用于客户端优选IP与proxyip，即CF节点访问CF网站的落地IP地区、访问非CF网站落地IP地区，两者都与VPS地区一致
+#### Scenario 4: WARP Integration
+- Install WARP dual-stack (IPv4+IPv6) on VPS
+- **Result**: Fixed outbound IP (104.28.../2a09:...) or WARP unlock functionality
 
-可选择现实4：通过在VPS安装WARP全局双栈V4+V6功能，即访问非CF网站的客户端优选IP的落地IP（104.28……/2a09:……）现实固定，或访问CF网站的proxyip的落地IP（104.28……/2a09:……）现实WARP解锁功能效果
+------------------------------------------------
 
--------------------------------------------
+## 5. Viewing Configuration & Share Links
 
-## 五：查看配置信息与分享链接
+### Access Your Configuration
 
-CF Vless：在网页地址栏输入 https:// workers域名 或者 pages域名 或者 自定义域名 /自定义uuid
-
-CF Trojan：在网页地址栏输入 https:// workers域名 或者 pages域名 或者 自定义域名 /自定义密码
-
-注意：
-
-1、workers域名 或者 pages域名 或者 自定义域名如果都被墙，必须开代理才能打开
-
-2、使用自定域时，原先workers域名 或者 pages域名下的配置信息与分享链接依旧可用
-
----------------------------------
-
-## 六：优选IP应用
-
-CF官方优选80系端口：80、8080、8880、2052、2082、2086、2095
-
-CF官方优选443系端口：443、2053、2083、2087、2096、8443
-
-如果你没有天天最高速度或者选择国家的需求，使用默认的CF官方IP或者域名即可，不必更换
-
-推荐好记的懒人专属CF官方IP如下，支持13个标准端口切换，称之为"冲在最前的不死IP"
-
-104.16.0.0 
-
-104.17.0.0 
-
-104.18.0.0 
-
-104.19.0.0 
-
-104.20.0.0 
-
-104.21.0.0 
-
-104.22.0.0 
-
-104.24.0.0 
-
-104.25.0.0 
-
-104.26.0.0 
-
-104.27.0.0 
-
-172.66.0.0
-
-172.67.0.0
-
-162.159.0.0
-
-2606:4700::0 需IPV6环境
-
-CDN优选域名：yg1.ygkkk.dpdns.org (yg1中的1，可换为1-11中任意数字，甬哥维护)
-
-本地电脑端优选项目推荐（可在上面代码区直接下载）：
-
-1、CDN优选域名V23.8.18 (电脑win64)
-
-2、CF优选反代IP (电脑版，带测速)
-
-3、CF优选官方IP (电脑版、可选择部分国家)
-
-4、CF优选官方IP (美、亚、欧三地区无交互电脑版！强烈推荐！点击[视频教程](https://youtu.be/6kKIzObEZ2c))
-
-5、CF优选官方IP (电脑版，带测速)
-
-注意：多个CF节点在客户端使用负载均衡或者自动选择时，建议所有应用的节点都为同一个国家地区，以避免不同国家之间的IP乱跳现象
-
----------------------------------
-
-## 七：客户端推荐
-
-#### 启用分片(Fragment)功能的好处：无视域名被墙TLS阻断，从而让workers等被墙的域名支持TLS节点
-#### 提示：未被墙TLS阻断的自定义域名或pages域名无需开启分片就可使用TLS节点
- 
-目前支持该功能的平台客户端如下（点击名称即跳转到官方下载地址）
-
-1、安卓Android：[v2rayNG](https://github.com/2dust/v2rayNG/tags)、[Nekobox](https://github.com/starifly/NekoBoxForAndroid/releases)、[Karing](https://github.com/KaringX/karing/tags)、v2box
-
-2、电脑Windows：[v2rayN](https://github.com/2dust/v2rayN/tags)、[Hiddify](https://github.com/hiddify/hiddify-next/tags)、[Karing](https://github.com/KaringX/karing/tags)
-
-3、苹果Ios：Karing、Hiddify Proxy & VPN、Shadowrocket(小火箭)、Streisand、v2box
-
-4、软路由：passwall、ssr-plus、homeproxy
-
-注意：其他平台客户端未开启分片功能情况下，workers域的6个443系TLS节点是不可用的
-
-注意：Shadowrocket(小火箭)、v2box、v2rayn、v2rayng客户端对trojan+ws有强制开启TLS问题，造成trojan+ws不通。且clash订阅没有trojan+ws节点。特此说明
-
-关于客户端使用问题，请看[CF vless/trojan永久免费节点教程（六）：节点不能用，问题出在哪？多平台免费客户端设置指南及避坑说明](https://youtu.be/8E0l0nQWLxs)
-
----------------------------------
-
-### CF视频教程集合：
-
-[CF workers永久免费vless节点搭建教程（一）：全网首发演示跳IP现象，解密两大节点使用技巧，优选IP、优选域名的优缺点说明](https://youtu.be/9V9CQxmfwoA)
-
-[CF workers永久免费vless节点搭建教程（二）：优选反代IP一键脚本发布，pages部署教程，多平台客户端设置说明，独家探讨CF免费代理敏感安全问题](https://youtu.be/McdRoLZeTqg)
-
-[CF workers永久免费Trojan节点搭建教程（三）：无需自定义域名，workers与pages两方案部署优选IP节点；CF Trojan与CF Vless对比总结；如何看待Trojan被识别](https://youtu.be/lmhhL8M1k0I)
-
-强烈推荐：[CF vless/trojan永久免费节点教程（四）：解读优选官方IP、优选反代IP、优选域名三者的关系与特点；ProxyIP存在的意义](https://youtu.be/NaLd-orwFUE)
-
-强烈推荐：[CF vless/trojan永久免费节点教程（五）：不用自定义域名？不用频繁优选IP？不用订阅器？总结CF节点与域名的结构关系图](https://youtu.be/8s-ELRuFaeE)
-
-强烈推荐：[CF vless/trojan永久免费节点教程（六）：节点不能用，问题出在哪？多平台免费客户端设置指南及避坑说明](https://youtu.be/8E0l0nQWLxs)
-
-高阶推荐：[CF vless/trojan永久免费节点最终教程（七）：全网独家演示真正的"固定IP"，解决twitch、chatgpt客户端报错问题；一键自制反代IP与ProxyIP；揭秘你被他人偷扫IP的风险](https://youtu.be/QOnMVULADko)
-
-高阶推荐：[CF vless/trojan永久免费节点最终教程（八）：自建全端口通用的ProxyIP，同时支持客户端地址优选反代IP，自建反代IP的最终教程](https://youtu.be/CVZStM0t8BA)
-
-[直播精选回顾：CF workers vless免费节点四大特点，节点被断流阻断问题](https://youtu.be/9OHGpWlfdJ0)
-
-[ClouDNS永久免费域名最终教程：CF pages vless自定义域名直接部署](https://youtu.be/PN0BLANXh4I)
-
-小白优选IP应用推荐：[CF优选IP解放小白最终方案：一键自动生成美国、香港、欧洲三区优选官方IP，电脑WIN、安卓android、苹果ios多平台一键通用](https://youtu.be/6kKIzObEZ2c)
-
-[CF vless/trojan免费节点混淆时代来临：workers/pages代码混淆后详细设置的更新说明；1101报错总结](https://youtu.be/QSFaP5EVI04)
-
-
----------------------------------
----------------------------------
----------------------------------
----------------------------------
-## 优选域名、优选官方IP一键脚本（在本地网络环境下利用termux或者ish运行）：
-
-1、安卓请使用termux官方项目下载客户端（谷歌商店下载的不可用！）：https://github.com/termux/termux-app/releases/tag/v0.118.1
-
-首次安装后，请先安装依赖：```pkg upgrade```，然后运行以下你要使用的脚本
-
-2、苹果手机用户，由于ISH最新版有BUG导致脚本运行卡住，请使用ISH_1.2.2版本，可以用巨魔先安装再降级，网上也有其它指定旧版IPA安装的教程
-
-首次安装后，请先安装依赖：```apk add curl bash```，然后运行以下你要使用的脚本
-
--------------------------------------------------------------
-### 脚本1：CF-优选官方IP (默认美、亚、欧三地区 强烈推荐！！！)，安卓苹果手机平板专用：
+**For VLESS**:
 ```
+https://workers-domain.workers.dev/your-custom-uuid
+https://pages-domain.pages.dev/your-custom-uuid
+https://your-custom-domain.com/your-custom-uuid
+```
+
+**For Trojan**:
+```
+https://workers-domain.workers.dev/your-custom-password
+https://pages-domain.pages.dev/your-custom-password
+https://your-custom-domain.com/your-custom-password
+```
+
+### Important Notes
+
+1. **Domain Blocking**: If workers/pages domains are blocked, you must use a proxy to access them
+2. **Custom Domain Compatibility**: Original workers/pages domain configurations remain functional even after adding custom domains
+
+------------------------------------------------
+
+## 6. Optimal IP Selection
+
+### Cloudflare Official Standard Ports
+
+**Port 80 Series** (Non-TLS):
+- 80, 8080, 8880, 2052, 2082, 2086, 2095
+
+**Port 443 Series** (TLS):
+- 443, 2053, 2083, 2087, 2096, 8443
+
+### Recommended CF Official IPs (Lazy User Friendly)
+
+These IPs support all 13 standard ports and are called "The Immortal Front-Line IPs":
+
+```
+104.16.0.0    104.17.0.0    104.18.0.0    104.19.0.0
+104.20.0.0    104.21.0.0    104.22.0.0    104.24.0.0
+104.25.0.0    104.26.0.0    104.27.0.0
+172.66.0.0    172.67.0.0    162.159.0.0
+2606:4700::0  (Requires IPv6 environment)
+```
+
+### CDN Optimal Domains
+
+**Maintained Domains**: `yg1.ygkkk.dpdns.org` to `yg11.ygkkk.dpdns.org`
+(Replace "1" with any number from 1-11)
+
+### Local PC Optimization Tools
+
+Available in the code section above:
+
+1. **CDN Optimal Domain V23.8.18** (Windows x64)
+2. **CF Optimal Reverse Proxy IP** (PC version with speed test)
+3. **CF Optimal Official IP** (PC version, select specific countries)
+4. **CF Optimal Official IP** (USA/Asia/Europe three-region non-interactive - **Highly Recommended!**)
+5. **CF Optimal Official IP** (PC version with speed test)
+
+### Load Balancing Tip
+
+⚠️ When using load balancing or auto-selection with multiple CF nodes, ensure all nodes are from the same country/region to avoid IP jumping issues.
+
+------------------------------------------------
+
+## 7. Recommended Clients
+
+### Fragment Function Benefits
+
+Enables **TLS nodes** to bypass domain blocking and TLS interruption, allowing blocked workers domains to work with TLS.
+
+**Note**: Unblocked custom domains or pages domains can use TLS nodes without enabling fragment.
+
+### Supported Platforms & Clients
+
+#### Android
+- [v2rayNG](https://github.com/2dust/v2rayNG/tags) ⭐
+- [Nekobox](https://github.com/starifly/NekoBoxForAndroid/releases)
+- [Karing](https://github.com/KaringX/karing/tags)
+- v2box
+
+#### Windows
+- [v2rayN](https://github.com/2dust/v2rayN/tags) ⭐
+- [Hiddify](https://github.com/hiddify/hiddify-next/tags)
+- [Karing](https://github.com/KaringX/karing/tags)
+
+#### iOS
+- Karing
+- Hiddify Proxy & VPN
+- Shadowrocket (小火箭)
+- Streisand
+- v2box
+
+#### Software Router
+- passwall
+- ssr-plus
+- homeproxy
+
+### Important Client Notes
+
+⚠️ **Without fragment enabled**: Workers domain's 6 TLS nodes (port 443 series) will NOT work
+
+⚠️ **Trojan+WS Issue**: Shadowrocket, v2box, v2rayN, v2rayNG force TLS on trojan+ws, causing connection failures. Clash subscriptions don't include trojan+ws nodes.
+
+------------------------------------------------
+
+## 📖 Video Tutorials (Chinese)
+
+### Essential Tutorials for Beginners
+
+1. **[2025.9.8 Update]**: Semi-obfuscation usage, optimal IP confusion resolution, error 1101 warnings
+   - 🎥 [Watch on YouTube](https://youtu.be/rUpCuXTQqmQ)
+
+2. **CF VLESS Workers Native Domain**: No custom domain, no optimal IP subscription, no control panel
+   - 🎥 [Watch on YouTube](https://youtu.be/PpPKzOYLZQg)
+
+3. **CF VLESS Pages Native Domain**: NAT64 ProxyIP generation explained
+   - 🎥 [Watch on YouTube](https://youtu.be/yR-JpVV6SHs)
+
+4. **Code Obfuscation Era**: Workers/pages code obfuscation detailed setup, error 1101 summary
+   - 🎥 [Watch on YouTube](https://youtu.be/QSFaP5EVI04)
+
+### Complete Tutorial Series
+
+1. **[Tutorial 1]**: IP jumping phenomenon, two node usage techniques, optimal IP/domain pros and cons
+   - 🎥 [Watch on YouTube](https://youtu.be/9V9CQxmfwoA)
+
+2. **[Tutorial 2]**: Optimal reverse proxy IP script, pages deployment, multi-platform client setup
+   - 🎥 [Watch on YouTube](https://youtu.be/McdRoLZeTqg)
+
+3. **[Tutorial 3]**: CF Trojan deployment without custom domain, Trojan vs VLESS comparison
+   - 🎥 [Watch on YouTube](https://youtu.be/lmhhL8M1k0I)
+
+4. **[Tutorial 4]** ⭐ **Highly Recommended**: Understanding optimal official IP, reverse proxy IP, and optimal domains
+   - 🎥 [Watch on YouTube](https://youtu.be/NaLd-orwFUE)
+
+5. **[Tutorial 5]** ⭐ **Highly Recommended**: No custom domain? No frequent IP optimization? Node & domain structure explained
+   - 🎥 [Watch on YouTube](https://youtu.be/8s-ELRuFaeE)
+
+6. **[Tutorial 6]** ⭐ **Highly Recommended**: Troubleshooting node issues, multi-platform client setup guide
+   - 🎥 [Watch on YouTube](https://youtu.be/8E0l0nQWLxs)
+
+7. **[Tutorial 7]** 🔥 **Advanced**: True "fixed IP" demonstration, solving Twitch/ChatGPT errors
+   - 🎥 [Watch on YouTube](https://youtu.be/QOnMVULADko)
+
+8. **[Tutorial 8]** 🔥 **Advanced**: Self-hosted universal port ProxyIP and reverse proxy IP
+   - 🎥 [Watch on YouTube](https://youtu.be/CVZStM0t8BA)
+
+### Additional Resources
+
+- **Live Stream Recap**: CF workers vless free node features, connection issues
+  - 🎥 [Watch on YouTube](https://youtu.be/9OHGpWlfdJ0)
+
+- **Free Domain Tutorial**: ClouDNS permanent free domain with CF pages deployment
+  - 🎥 [Watch on YouTube](https://youtu.be/PN0BLANXh4I)
+
+- **Optimal IP for Beginners**: Auto-generate USA/Asia/Europe optimal IPs for Windows/Android/iOS
+  - 🎥 [Watch on YouTube](https://youtu.be/6kKIzObEZ2c)
+
+------------------------------------------------
+
+## 📱 Mobile Optimization Scripts
+
+### Optimal Domain & Official IP One-Click Scripts
+
+Run these scripts on your mobile device using Termux (Android) or iSH (iOS) in your local network environment.
+
+### Android - Termux Setup
+
+1. **Download Termux** (MUST use official version from GitHub, NOT Google Play):
+   - 📥 [Download Termux v0.118.1](https://github.com/termux/termux-app/releases/tag/v0.118.1)
+
+2. **Install Dependencies** (first time only):
+   ```bash
+   pkg upgrade
+   ```
+
+3. **Run Your Chosen Script** (see below)
+
+### iOS - iSH Setup
+
+1. **Download iSH v1.2.2** (IMPORTANT: Latest version has bugs, use v1.2.2):
+   - Install via TrollStore then downgrade, or find IPA installation tutorials online
+   - 📥 [Download iSH 1.2.2](./ISH_1.2.2) (included in this repo)
+
+2. **Install Dependencies** (first time only):
+   ```bash
+   apk add curl bash
+   ```
+
+3. **Run Your Chosen Script** (see below)
+
+### Available Scripts
+
+#### Script 1: CF Optimal Official IP (USA/Asia/Europe) ⭐ HIGHLY RECOMMENDED
+
+**For Android & iOS tablets/phones**:
+```bash
 curl -sSL https://raw.githubusercontent.com/yonggekkk/Cloudflare_vless_trojan/main/cf/cf.sh -o cf.sh && chmod +x cf.sh && bash cf.sh
 ```
--------------------------------------------------------------
 
-### 脚本2：CF-CDN优选公共大厂域名脚本，苹果安卓手机平板专用：
-```
+**Features**:
+- Automatic region selection (America, Asia, Europe)
+- No interaction required
+- Best for beginners
+
+#### Script 2: CF CDN Optimal Public Domains
+
+**For Android & iOS tablets/phones**:
+```bash
 curl -sSL https://gitlab.com/rwkgyg/CFwarp/raw/main/point/CFcdnym.sh -o CFcdnym.sh && chmod +x CFcdnym.sh && bash CFcdnym.sh
 ```
-------------------------------------------------------------------------
-### 脚本3：CF-优选官方IP脚本（带测速），苹果安卓手机平板专用：
-```
+
+**Features**:
+- Tests popular CDN provider domains
+- Finds best performing domains for your network
+
+#### Script 3: CF Optimal Official IP (With Speed Test)
+
+**For Android & iOS tablets/phones**:
+```bash
 curl -sSL https://gitlab.com/rwkgyg/CFwarp/raw/main/point/cfip.sh -o cfip.sh && chmod +x cfip.sh && bash cfip.sh
 ```
--------------------------------------------------------------
 
-### 感谢支持！微信打赏甬哥侃侃侃ygkkk
-![41440820a366deeb8109db5610313a1](https://github.com/user-attachments/assets/7dbaa3b1-cce4-415a-b46e-049531cf4d0d)
+**Features**:
+- Comprehensive speed testing
+- More detailed results
+- Slightly longer execution time
 
--------------------------------------------------------------
+------------------------------------------------
 
-### 感谢你右上角的star🌟
+## 🙏 Credits & Acknowledgments
+
+### Code Sources
+
+- [ca110us](https://github.com/ca110us/epeius) - Core epeius implementation
+- [emn178](https://github.com/emn178/js-sha256/blob/master/src/sha256.js) - SHA256 implementation
+- [3Kmfi6HP](https://github.com/3Kmfi6HP/EDtunnel) - EDtunnel base
+- [badafans](https://github.com/badafans/Cloudflare-IP-SpeedTest) - NAT64 code & speed test tools
+- [XIU2](https://github.com/XIU2/CloudflareSpeedTest) - CloudflareSpeedTest
+
+### Original Author Community
+
+- 📝 **Blog**: [Yongge's Blog](https://ygkkk.blogspot.com)
+- 🎥 **YouTube**: [Yongge's Channel](https://www.youtube.com/@ygkkk)
+- 💬 **Telegram Group**: [Join Discussion](https://t.me/+jZHc6-A-1QQ5ZGVl)
+- 📢 **Telegram Channel**: [Follow Updates](https://t.me/+DkC9ZZUgEFQzMTZl)
+
+### Disclaimer
+
+All code is sourced from the GitHub community and integrated with assistance from ChatGPT. This project is for educational purposes only.
+
+------------------------------------------------
+
+## ⭐ Star History
+
 [![Stargazers over time](https://starchart.cc/yonggekkk/Cloudflare-workers-pages-vless.svg)](https://starchart.cc/yonggekkk/Cloudflare-workers-pages-vless)
-------------------------------------------------------------------------
-### 代码来源：[ca110us](https://github.com/ca110us/epeius)、[emn178](https://github.com/emn178/js-sha256/blob/master/src/sha256.js)、[3Kmfi6HP](https://github.com/3Kmfi6HP/EDtunnel)、[badafans](https://github.com/badafans/Cloudflare-IP-SpeedTest)、[XIU2](https://github.com/XIU2/CloudflareSpeedTest)
-### 声明：所有代码来源于Github社区，并通过ChatGPT进行整合
+
+------------------------------------------------
+
+## 📄 License
+
+This project follows the original repository's licensing terms. Please refer to individual component licenses as credited above.
+
+------------------------------------------------
+
+### Thank you for your support! ⭐ Please star this repository if you find it useful!
+
+**English Translation & Enhancement by**: [Erfan (Rainman69)](https://github.com/Rainman69) | **Original Author**: [Yongge (yonggekkk)](https://github.com/yonggekkk)
